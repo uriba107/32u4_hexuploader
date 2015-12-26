@@ -62,10 +62,13 @@
             // 
             // textBoxHexPath
             // 
+            this.textBoxHexPath.AllowDrop = true;
             this.textBoxHexPath.Location = new System.Drawing.Point(12, 33);
             this.textBoxHexPath.Name = "textBoxHexPath";
             this.textBoxHexPath.Size = new System.Drawing.Size(223, 20);
             this.textBoxHexPath.TabIndex = 4;
+            this.textBoxHexPath.DragDrop += new System.Windows.Forms.DragEventHandler(this.textBoxHexPath_DragDrop);
+            this.textBoxHexPath.DragEnter += new System.Windows.Forms.DragEventHandler(this.textBoxHexPath_DragEnter);
             // 
             // buttonBrowsHex
             // 
@@ -127,6 +130,7 @@
             // 
             // main
             // 
+            this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(284, 194);
@@ -139,6 +143,8 @@
             this.MinimumSize = new System.Drawing.Size(300, 200);
             this.Name = "main";
             this.Text = "32U4 Hex Uploader";
+            this.DragDrop += new System.Windows.Forms.DragEventHandler(this.textBoxHexPath_DragDrop);
+            this.DragEnter += new System.Windows.Forms.DragEventHandler(this.textBoxHexPath_DragEnter);
             this.groupBoxMode.ResumeLayout(false);
             this.groupBoxMode.PerformLayout();
             this.ResumeLayout(false);

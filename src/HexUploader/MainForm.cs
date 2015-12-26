@@ -125,17 +125,14 @@ namespace HexUploader
             //string AvrDudeParams = " -C " + AvrDudePath + "\\avrdude.conf -patmega32u4 -cavr109 -b57600 -D -U -PCOM" + ComPort + " flash:w:" + HexPath + ":i";
             string AvrDudeBin = AvrDudePath + "\\upload_code.bat";
             string AvrDudeParams = " " + ComPort + " " + HexPath;
-            //MessageBox.Show(AvrDudeBin + AvrDudeParams);
             Process p = new Process();
-            //p.StartInfo.UseShellExecute = true;
-            //p.StartInfo.RedirectStandardOutput = false;
+
             p.StartInfo.FileName = AvrDudeBin;
             p.StartInfo.Arguments = AvrDudeParams;
             p.StartInfo.RedirectStandardError = false;
             p.StartInfo.RedirectStandardOutput = false;
             p.StartInfo.UseShellExecute = false;
             p.Start();
-            //Debug.WriteLine(p.StandardOutput.ReadToEnd());
             p.WaitForExit(15000);
         }
 
@@ -167,6 +164,23 @@ namespace HexUploader
             {
                 selectCom.Enabled = false;
                 UploadMode = "manual";
+            }
+        }
+
+        private void textBoxHexPath_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] dropped_file = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (dropped_file != null && dropped_file.Length != 0 && dropped_file[0].EndsWith(".hex"))
+            {
+                textBoxHexPath.Text = dropped_file[0];
+            }
+        }
+
+        private void textBoxHexPath_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop, false) == true)
+            {
+                e.Effect = DragDropEffects.All;
             }
         }
     }
