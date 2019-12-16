@@ -1,7 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Express 2012 for Windows Desktop
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2005
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "32u4_uploader", "HexUploader\32u4_uploader.csproj", "{62609962-C1EB-4C60-BB56-093D98FDD50A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArduinoUploader", "ArduinoUploader\ArduinoUploader.csproj", "{76B83943-5E26-4A25-A2BC-074C13744150}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,8 +17,15 @@ Global
 		{62609962-C1EB-4C60-BB56-093D98FDD50A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62609962-C1EB-4C60-BB56-093D98FDD50A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62609962-C1EB-4C60-BB56-093D98FDD50A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76B83943-5E26-4A25-A2BC-074C13744150}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76B83943-5E26-4A25-A2BC-074C13744150}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76B83943-5E26-4A25-A2BC-074C13744150}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76B83943-5E26-4A25-A2BC-074C13744150}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {82D00FE3-2D2A-4E81-B6F9-22EE6683804F}
 	EndGlobalSection
 EndGlobal

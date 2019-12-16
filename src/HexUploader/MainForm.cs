@@ -7,25 +7,41 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO;
 using System.IO.Ports;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Diagnostics;
+using ArduinoUploader;
+using ArduinoUploader.Hardware;
+using System.Runtime.InteropServices;
 
 namespace HexUploader
 {
     public partial class main : Form
     {
         static SerialPort _serialPort;
+
         public string[] AvailablePorts = SerialPort.GetPortNames();
         public string UploadMode = "bootloader";
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        public static extern uint GetShortPathName(string lpszLongPath, StringBuilder lpszShortPath, uint cchBuffer);
+
+        private static string GetShortPath(string longPath)
+        {
+            StringBuilder shortPath = new StringBuilder(255);
+            GetShortPathName(longPath, shortPath, 255);
+            return shortPath.ToString();
+        }
+
         public main()
         {
             InitializeComponent();
             CheckPorts();
         }
 
-        private void comboBox1_DropDown(object sender, EventArgs e)
+        private void selectCom_DropDown(object sender, EventArgs e)
         {
             CheckPorts();
         }
@@ -64,35 +80,61 @@ namespace HexUploader
         {
             groupBoxMode.Enabled = false;
             buttonUpload.Enabled = false;
-            AvailablePorts = SerialPort.GetPortNames();
-            if (UploadMode == "bootloader")
+            var HexPath = @textBoxHexPath.Text;
+            var triggerBootloader = (UploadMode == "bootloader")?true:false;
+            //HexPath = GetShortPath(HexPath);
+            if (HexPath == "" || !File.Exists(HexPath))
             {
-                string ActivePort = getActivePort(UploadMode);
-                launchBootloader(ActivePort);
+                UploadError("No HEX file was selected");
+                return;
             }
-            string ProgPort = AutoDetectNewPort(AvailablePorts);
+            AvailablePorts = SerialPort.GetPortNames();
+
+            //if (UploadMode == "bootloader")
+            //{
+            //    string ActivePort = getActivePort(UploadMode);
+            //    try
+            //    {
+            //        launchBootloader(ActivePort);
+            //    }
+            //    catch
+            //    {
+            //        UploadError("Could not trigger Bootloader on device");
+            //        return;
+            //    }
+            //}
+            string ProgPort = (triggerBootloader)? getActivePort(UploadMode): AutoDetectNewPort(AvailablePorts);
+ 
             if (ProgPort != "")
             {
-                uploadHex(ProgPort, textBoxHexPath.Text);
+                uploadHex(ProgPort, HexPath, triggerBootloader);
+
                 groupBoxMode.Enabled = true;
                 buttonUpload.Enabled = true;
                 return;
             }
-            MessageBox.Show("No Device Detected");
+            UploadError("No Device Detected");
+        }
+
+        private void UploadError(string msg)
+        {
+            MessageBox.Show(msg);
             groupBoxMode.Enabled = true;
             buttonUpload.Enabled = true;
         }
-
         private string AutoDetectNewPort(string[] InitialPorts)
         {
             List<string> ProgramingPort = new List<string>();
-            while (ProgramingPort.Count() == 0)
+            var Timeout = DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(5));
+            while ((ProgramingPort.Count() == 0) && (DateTimeOffset.UtcNow < Timeout))
             {
                 Thread.Sleep(50);
                 string[] updatedPorts = SerialPort.GetPortNames();
                 ProgramingPort = updatedPorts.Except(InitialPorts).ToList();
             }
-            return ProgramingPort[0];
+            if (ProgramingPort.Any())
+                return ProgramingPort[0];
+            return "";
         }
 
         private string incrementComPort(string ComPort)
@@ -107,33 +149,73 @@ namespace HexUploader
             _serialPort = new SerialPort();
             _serialPort.PortName = ComPort;
             _serialPort.BaudRate = 1200;
-            _serialPort.Open();
-            Thread.Sleep(50);
-            _serialPort.Close();
-            Thread.Sleep(50);
+            try
+            {
+                _serialPort.Open();
+                Thread.Sleep(50);
+                _serialPort.Close();
+                Thread.Sleep(50);
+            }
+            catch
+            {
+                return;
+            }
+
         }
 
-        private void uploadHex(string ComPort, string HexPath)
+        private void uploadHexAvrdude(string ComPort, string HexPath)
         {
             if (HexPath == "")
             {
                 MessageBox.Show("No HEX file was selected");
                 return;
             }
-            string AvrDudePath = "bin\\Avrdude";
-            //string AvrDudeBin = AvrDudePath + "\\avrdude.exe";
-            //string AvrDudeParams = " -C " + AvrDudePath + "\\avrdude.conf -patmega32u4 -cavr109 -b57600 -D -U -PCOM" + ComPort + " flash:w:" + HexPath + ":i";
-            string AvrDudeBin = AvrDudePath + "\\upload_code.bat";
-            string AvrDudeParams = " " + ComPort + " " + HexPath;
+            string AvrDudePath = @"Avrdude";
+            string AvrDudeBin = AvrDudePath + @"\avrdude.exe";
+            string AvrDudeParams = "-v -patmega32u4 -cavr109  -P" + ComPort + " -b57600 -D -Uflash:w:\'" + HexPath + "\':i -C " + @AvrDudePath + "\\avrdude.conf";
+
+            Console.WriteLine(AvrDudeBin);
+            ProcessStartInfo avrdude = new ProcessStartInfo();
             Process p = new Process();
 
-            p.StartInfo.FileName = AvrDudeBin;
-            p.StartInfo.Arguments = AvrDudeParams;
-            p.StartInfo.RedirectStandardError = false;
-            p.StartInfo.RedirectStandardOutput = false;
-            p.StartInfo.UseShellExecute = false;
+            avrdude.FileName = AvrDudeBin;
+            avrdude.Arguments = AvrDudeParams;
+            avrdude.RedirectStandardError = false;
+            avrdude.RedirectStandardOutput = false;
+            avrdude.UseShellExecute = false;
+
+            p.StartInfo = avrdude;
             p.Start();
-            p.WaitForExit(15000);
+            if (p != null && !p.HasExited)
+                p.WaitForExit(15000);
+        }
+
+        private void uploadHex(string ComPort, string HexPath, bool triggerBootloader)
+        {
+            if (HexPath == "")
+            {
+                MessageBox.Show("No HEX file was selected");
+                return;
+            }
+            //var progress = new Progress(ReportProgress);
+
+            //progress.ProgressChanged += (s, e) =>
+            //{
+            //    UploadProgressBar.Value = e.
+            //};
+            var options = new ArduinoSketchUploaderOptions()
+            {
+                FileName = @HexPath,
+                PortName = ComPort,
+                ArduinoModel = ArduinoModel.Micro,
+                TriggerBootloader = triggerBootloader
+            };
+            //var progress = new Progress<double>(ReportProgress);
+
+            var uploader = new ArduinoSketchUploader(
+                options, progress: new Progress<double>(ReportProgress));
+
+            uploader.UploadSketch();
         }
 
         private void buttonBrowsHex_Click(object sender, EventArgs e)
@@ -151,7 +233,6 @@ namespace HexUploader
                 // Assign the cursor in the Stream to the Form's Cursor property.
             }
         }
-
 
         private void radioButtonModeSerial_CheckedChanged(object sender, EventArgs e)
         {
@@ -182,6 +263,13 @@ namespace HexUploader
             {
                 e.Effect = DragDropEffects.All;
             }
+        }
+
+        void ReportProgress(double value)
+        {
+            //Update the UI to reflect the progress value that is passed back.
+            //Debug.WriteLine((int)(value*100));
+            UploadProgressBar.Value = (int)(value*100)+1;
         }
     }
 }
