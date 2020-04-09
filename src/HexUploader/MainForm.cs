@@ -78,8 +78,8 @@ namespace HexUploader
 
         private void buttonUpload_Click(object sender, EventArgs e)
         {
-            groupBoxMode.Enabled = false;
-            buttonUpload.Enabled = false;
+            setButtonEnable(false);
+
             var HexPath = @textBoxHexPath.Text;
             var triggerBootloader = (UploadMode == "bootloader")?true:false;
             //HexPath = GetShortPath(HexPath);
@@ -90,42 +90,40 @@ namespace HexUploader
             }
             AvailablePorts = SerialPort.GetPortNames();
 
-            //if (UploadMode == "bootloader")
-            //{
-            //    string ActivePort = getActivePort(UploadMode);
-            //    try
-            //    {
-            //        launchBootloader(ActivePort);
-            //    }
-            //    catch
-            //    {
-            //        UploadError("Could not trigger Bootloader on device");
-            //        return;
-            //    }
-            //}
             string ProgPort = (triggerBootloader)? getActivePort(UploadMode): AutoDetectNewPort(AvailablePorts);
  
             if (ProgPort != "")
             {
                 uploadHex(ProgPort, HexPath, triggerBootloader);
 
-                groupBoxMode.Enabled = true;
-                buttonUpload.Enabled = true;
+                setButtonEnable(true);
+
                 return;
             }
             UploadError("No Device Detected");
         }
 
-        private void UploadError(string msg)
+        private void setButtonEnable(bool state)
         {
-            MessageBox.Show(msg);
+            groupBoxMode.Enabled = state;
+            buttonUpload.Enabled = state;
+        }
+        private void setButtonEnable()
+        {
             groupBoxMode.Enabled = true;
             buttonUpload.Enabled = true;
         }
+
+        private void UploadError(string msg)
+        {
+            MessageBox.Show(msg);
+            setButtonEnable(true);
+        }
+
         private string AutoDetectNewPort(string[] InitialPorts)
         {
             List<string> ProgramingPort = new List<string>();
-            var Timeout = DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(5));
+            var Timeout = DateTimeOffset.UtcNow.Add(TimeSpan.FromSeconds(15));
             while ((ProgramingPort.Count() == 0) && (DateTimeOffset.UtcNow < Timeout))
             {
                 Thread.Sleep(50);
@@ -192,17 +190,13 @@ namespace HexUploader
 
         private void uploadHex(string ComPort, string HexPath, bool triggerBootloader)
         {
+
             if (HexPath == "")
             {
                 MessageBox.Show("No HEX file was selected");
                 return;
             }
-            //var progress = new Progress(ReportProgress);
 
-            //progress.ProgressChanged += (s, e) =>
-            //{
-            //    UploadProgressBar.Value = e.
-            //};
             var options = new ArduinoSketchUploaderOptions()
             {
                 FileName = @HexPath,
@@ -215,7 +209,10 @@ namespace HexUploader
             var uploader = new ArduinoSketchUploader(
                 options, progress: new Progress<double>(ReportProgress));
 
-            uploader.UploadSketch();
+            var t = new Thread(uploader.UploadSketch);
+
+            t.Start();
+
         }
 
         private void buttonBrowsHex_Click(object sender, EventArgs e)
